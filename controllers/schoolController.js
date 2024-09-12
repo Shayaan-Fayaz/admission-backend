@@ -1,4 +1,6 @@
 const School = require('../models/schoolModel');  // Assuming the schema is in models folder
+const cloudinary = require('./../utils/cloudinary');
+const path = require("path");
 
 
 // Controller to create a new School document
@@ -147,4 +149,30 @@ exports.searchSchoolByName = async (req, res) => {
       });
     }
   };
-  
+
+exports.uploadPhoto = async (req, res)=> {
+  const schoolId = req.params.id;
+  try {
+    const result = await cloudinary.uploader.upload(req.file.path);
+    // console.log(req.param)
+    
+    // console.log(schoolId);
+    // const school = await School.findById(schoolId);
+    // console.log('School: ' + school)
+
+
+
+    const updatedSchool = await School.findByIdAndUpdate(schoolId, {profile: result.url}, {new: true})
+
+
+    console.log(updatedSchool)
+    
+    res.status(200).json({
+      message: 'success',
+      data: updatedSchool
+    });
+} catch (error) {
+    console.log("An error in uploading",error);
+    return "";
+}
+}

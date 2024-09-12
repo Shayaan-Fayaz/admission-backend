@@ -52,6 +52,9 @@ const schoolSchema = new mongoose.Schema({
   studentCount: {
     type: Number,  // Total number of students enrolled
     required: true
+  },
+  profile:{
+    type: String
   }
 });
 
