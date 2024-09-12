@@ -1,4 +1,6 @@
 const Student = require('./../models/studentModel');  // Assuming your schema is in the models folder
+const cloudinary = require('./../utils/cloudinary');
+
 
 // Controller to create a new Student document
 exports.createStudent = async (req, res) => {
@@ -63,31 +65,56 @@ exports.createStudent = async (req, res) => {
 };
 
 
-// Controller to update a student by ID
 exports.updateStudentById = async (req, res) => {
   const { id } = req.params;
+  const files = req.files; // Get the files from the request
 
   try {
-    const updatedStudent = await Student.findByIdAndUpdate(
-      id,
-      { $set: req.body }, // Update the fields with the data sent in the request body
-      { new: true, runValidators: true } // Return the updated document and validate the data
-    );
+    // Handle the update for other fields
+    const { body } = req;
+    let documents = {};
 
-    if (!updatedStudent) {
-      return res.status(404).json({
-        message: 'Student not found'
+    if (files && files.length > 0) {
+      // Upload files to Cloudinary
+      const fileUploads = files.map(file => {
+        return new Promise((resolve, reject) => {
+          cloudinary.uploader.upload_stream({ resource_type: 'auto' }, (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve({ fieldname: file.fieldname, url: result.secure_url });
+            }
+          }).end(file.buffer);
+        });
       });
+
+      const uploadResults = await Promise.all(fileUploads);
+
+      // Map file results to document URLs
+      documents = uploadResults.reduce((acc, file) => {
+        acc[file.fieldname] = file.url;
+        return acc;
+      }, {});
     }
 
-    res.status(200).json({
-      message: 'Student updated successfully'
-    });
+    // Prepare update data
+    const updateData = { ...body };
+
+    // If documents are present, merge them with the updateData
+    if (Object.keys(documents).length > 0) {
+      updateData.documents = { ...updateData.documents, ...documents };
+    }
+
+    // Update student document
+    const updatedStudent = await Student.findByIdAndUpdate(id, updateData, { new: true });
+
+    if (!updatedStudent) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    res.status(200).json({ message: 'Student information updated successfully', data: updatedStudent });
   } catch (error) {
-    res.status(500).json({
-      message: 'Error updating student',
-      error: error.message
-    });
+    res.status(500).json({ message: 'Error updating student', error: error.message });
   }
 };
 

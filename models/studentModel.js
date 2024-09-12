@@ -72,6 +72,12 @@ const studentSchema = new mongoose.Schema({
   admissionNo: {
     type: String,
     required: true
+  },
+  // Modified documents field to store key-value pairs of document types and their URLs
+  documents: {
+    type: Map,
+    of: String,  // Maps document type (e.g., "sports certificate") to Cloudinary URL
+    default: {}
   }
 });
 
